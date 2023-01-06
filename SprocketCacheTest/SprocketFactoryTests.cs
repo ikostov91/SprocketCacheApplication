@@ -1,22 +1,20 @@
 using SprocketCacheApplication.Entities;
-using SprocketCacheApplication.Interfaces;
 
 namespace SprocketCacheTest
 {
-    public class SprocketCacheTests
+    public class SprocketCacheTests : IClassFixture<SprocketFactoryTestsFixture>
     {
-        private readonly int _testExpirationPeriod = 400;
-        private readonly ISprocketCache<Sprocket> _sprocketCache;
+        private readonly SprocketFactoryTestsFixture _fixture;
 
-        public SprocketCacheTests()
+        public SprocketCacheTests(SprocketFactoryTestsFixture fixture)
         {
-            this._sprocketCache = new SprocketDictionaryCache<Sprocket>(new SprocketFactory<Sprocket>(), this._testExpirationPeriod);
+            this._fixture = fixture;
         }
 
         [Fact]
         public async Task CheckCacheReturnsSprocketInstanceByKey()
         {
-            Sprocket newSprocket = await this._sprocketCache.Get("sprocket_1");
+            Sprocket newSprocket = await this._fixture.SprocketCache.Get("sprocket_1");
 
             Assert.NotNull(newSprocket);
         }
@@ -26,8 +24,8 @@ namespace SprocketCacheTest
         {
             string key = "sprocket_1";
 
-            Sprocket sprocketOne = await this._sprocketCache.Get(key);
-            Sprocket sprocketTwo = await this._sprocketCache.Get(key);
+            Sprocket sprocketOne = await this._fixture.SprocketCache.Get(key);
+            Sprocket sprocketTwo = await this._fixture.SprocketCache.Get(key);
 
             Assert.Equal(sprocketOne, sprocketTwo);
         }
@@ -37,9 +35,9 @@ namespace SprocketCacheTest
         {
             string key = "sprocket_1";
 
-            Sprocket sprocketOne = await this._sprocketCache.Get(key);
-            Thread.Sleep(500);
-            Sprocket sprocketTwo = await this._sprocketCache.Get(key);
+            Sprocket sprocketOne = await this._fixture.SprocketCache.Get(key);
+            Thread.Sleep(this._fixture.TestExpirationPeriod + 100);
+            Sprocket sprocketTwo = await this._fixture.SprocketCache.Get(key);
 
             Assert.NotEqual(sprocketOne, sprocketTwo);
         }
@@ -50,23 +48,19 @@ namespace SprocketCacheTest
             string keyOne = "sprocket_1";
             string keyTwo = "sprocket_2";
 
-            Sprocket sprocketOne = await this._sprocketCache.Get(keyOne);
-            Sprocket sprocketTwo = await this._sprocketCache.Get(keyTwo);
+            Sprocket sprocketOne = await this._fixture.SprocketCache.Get(keyOne);
+            Sprocket sprocketTwo = await this._fixture.SprocketCache.Get(keyTwo);
 
             Assert.NotEqual(sprocketOne, sprocketTwo);
         }
 
         [Fact]
-        public async Task CheckCacheIsThreadSafeWhenReturningSprocketInstance()
+        public void CheckCacheIsThreadSafeWhenReturningSprocketInstance()
         {
             string key = "sprocket_1";
 
-            Task<Sprocket> sprocketOne = Task.Run(async () => await this._sprocketCache.Get(key));
-            Task<Sprocket> sprocketTwo = Task.Run(async () => await this._sprocketCache.Get(key));
-
-            //Sprocket sprocketOne = await this._sprocketCache.Get(key);
-            //Thread.Sleep(10);
-            //Sprocket sprocketTwo = await this._sprocketCache.Get(key);
+            Task<Sprocket> sprocketOne = Task.Run(async () => await this._fixture.SprocketCache.Get(key));
+            Task<Sprocket> sprocketTwo = Task.Run(async () => await this._fixture.SprocketCache.Get(key));
 
             Task.WaitAll(sprocketOne, sprocketTwo);
 

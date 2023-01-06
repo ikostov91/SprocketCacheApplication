@@ -1,6 +1,8 @@
-﻿namespace SprocketCacheApplication.Entities
+﻿using SprocketCacheApplication.Interfaces;
+
+namespace SprocketCacheApplication.Entities
 {
-    public class Sprocket
+    public class Sprocket : ISprocket
     {
     }
 }

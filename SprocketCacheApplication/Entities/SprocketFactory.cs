@@ -3,7 +3,7 @@
 namespace SprocketCacheApplication.Entities
 {
     public class SprocketFactory<TSprocket> : ISprocketFactory<TSprocket>
-        where TSprocket : class, new()
+        where TSprocket : class, ISprocket, new()
     {
         public async Task<TSprocket> CreateSprocket()
         {

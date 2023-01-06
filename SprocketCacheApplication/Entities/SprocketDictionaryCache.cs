@@ -1,25 +1,24 @@
 ﻿using SprocketCacheApplication.Interfaces;
-using System.Threading;
 
 namespace SprocketCacheApplication.Entities
 {
-    public class SprocketDictionaryCache<TSprocket> : ISprocketCache<TSprocket> where TSprocket : class
+    public class SprocketDictionaryCache<TSprocket> : ISprocketCache<TSprocket>
+        where TSprocket : class, ISprocket
     {
+        private const int DEFAULT_EXPIRATION_PERIOD = 300;
+
         private class SprocketCacheEntry<TSprocket>
         {
             public TSprocket Sprocket { get; set; } = default!;
-            public DateTime CreationDate { get; set; }
+            public DateTime CreationTime { get; set; }
         }
 
-        private const int DEFAULT_EXPIRATION_PERIOD = 300;
+        private readonly Dictionary<string, SprocketCacheEntry<TSprocket>> _cache = new();
+
+        private static readonly SemaphoreSlim semaphoreSlim = new(1);
 
         private readonly int _expirationPeriod;
         private readonly ISprocketFactory<TSprocket> _sprocketFactory;
-        private readonly object lockObject = new();
-
-        private static SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1);
-
-        private readonly Dictionary<string, SprocketCacheEntry<TSprocket>> _cache = new();
 
         public SprocketDictionaryCache(ISprocketFactory<TSprocket> sprocketFactory)
             : this(sprocketFactory, DEFAULT_EXPIRATION_PERIOD)
@@ -47,22 +46,16 @@ namespace SprocketCacheApplication.Entities
 
             try
             {
-                Console.WriteLine($"CHECK FOR SPROCKET: {key}");
                 if (_cache.TryGetValue(key, out SprocketCacheEntry<TSprocket>? entry))
                 {
-                    Console.WriteLine($"SPROCKET EXISTING: {key}");
-                    DateTime currentTime = DateTime.Now;
-                    if (currentTime < entry.CreationDate.AddMilliseconds(this._expirationPeriod))
+                    if (DateTime.Now < entry.CreationTime.AddMilliseconds(this._expirationPeriod))
                     {
-                        Console.WriteLine($"RETURN EXISTING SPROCKET: {key}");
                         return entry.Sprocket;
                     }
                 }
 
-                Console.WriteLine($"CREATE NEW SPROCKET: {key}");
                 TSprocket newSprocket = await this._sprocketFactory.CreateSprocket();
-
-                _cache[key] = new SprocketCacheEntry<TSprocket>() { Sprocket = newSprocket, CreationDate = DateTime.Now };
+                _cache[key] = new SprocketCacheEntry<TSprocket>() { Sprocket = newSprocket, CreationTime = DateTime.Now };
 
                 return newSprocket;
             }
